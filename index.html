@@ -1,195 +1,398 @@
 <!DOCTYPE html>
 <html>
 <head>
-<script src="//code.jquery.com/jquery-2.1.1.min.js"></script>
-  <meta charset="utf-8">
-  <title>新闻瀑布流</title>
-  <style>
-    *{
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
-    ul,li{
-      list-style: none;
-    }
-    .clearfix:after{
-      content: '';
-      display: block;
-      clear: both;
-    }
-    .wrap{
-      width: 900px;
-      margin: 0 auto;
-    }
-    #pic-ct{
-      position: relative;
-    }
-    #pic-ct .item{
-      position: absolute;
-      padding: 0 0 10px 0;
-      width: 280px;
-      margin: 10px;
-      border: 1px solid #DFDFDF;
-      background: #fff;
-   /*    opacity: 0;  */
-      transition: all .8s;
-    }
-    #pic-ct .item img{
-      margin: 10px;
-      width: 260px;
-    }
-    #pic-ct .item .header{
-      height: 25px;
-      margin: 0 12px;
-      border-bottom: 1px solid #DBDBDB;
-    }
-    #pic-ct .content{
-      font-size: 12px;
-      line-height: 1.7;
-      margin: 10px 15px 0;
-      color: #777371;
-    }
-    #load{
-      visibility: hidden;
-      height: 20px; 
-    }
-    .hide{
-      display: none;
-    }
-  </style>
+<meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+<title>waterfull-lazyload-ajax demo</title>
+<meta name="description" content="">
+<meta name="keywords" content="">
+<link href="" rel="stylesheet">
+<style>
+	html,body,ul,li,p,div{
+		margin: 0;
+		padding: 0;
+		box-sizing: border-box;
+	}
+	ul,li{
+		list-style: none;
+	}
+
+  .wrap{
+  	width: 900px;
+		margin: 0 auto;
+  }
+
+	.clearfix:after{
+		content: '';
+		display: block;
+		clear: both;
+	}
+	#pic-ct{
+		position: relative;
+	}
+	#pic-ct .item{
+		position: absolute;
+		padding: 0 0 10px 0;
+		width: 280px;
+		margin: 10px;
+		border: 1px solid #DFDFDF;
+		background: #FFF;
+		opacity: 0;
+		transition: all .8s;
+	}
+	#pic-ct .item img{
+	    margin: 10px;
+	    width: 260px;
+	}
+	#pic-ct .item .header{
+    margin: 0 12px;
+	}
+	#pic-ct .desp{
+		font-size: 12px;
+		line-height: 1.8;
+	  margin: 10px 15px 0;
+	  color: #777371;
+	}
+	#load{
+		visibility: hidden;
+		height: 20px;
+	}
+	.hide{
+		display: none;
+	}
+</style>
 </head>
 <body>
-  <div class="wrap">
-      <div class="ct-waterfall">
-          <ul id="pic-ct" class="clearfix">
-             <!--  <li class="item">
-                <a href="#" class="link">
-                    <img src="http://s.img.mix.sina.com.cn/auto/resize?img=http%3A%2F%2Fwww.sinaimg.cn%2Fdy%2Fslidenews%2F5_img%2F2016_09%2F453_75615_657883.jpg&size=250_0" alt="">
-                </a>
-                <h4 class="header">标题</h4>
-                <p class="content">
-                    当地时间2016年3月1日，在东部和亲俄武装战斗中受伤首尾乌克兰士兵接受海豚治疗
-                </p>
-              </li> -->
-              <li class="item hide"></li>
-          </ul>
-        
-          <div id="load">我是有底线的</div>
-      </div>
-  </div>
-  
-  <script>
-    //整体思路:
-    // 1.获取数据
-    // 2.将数据变为DOM结构,以瀑布流的方式部署到页面上
-    // 3.当页面滚动至底部再次获取数据循环
-    
-    
-    /*函数实现*/
-    
-    
-      var curPage = 1       //第一次获取数据
-      var perPageCount = 10 //每次获取10个数据
-      
-      var itemArr = []  //瀑布流 定义空数组,存放每一列的总高度
-      var colLength = parseInt($('#pic-ct').width() / $('.item').outerWidth(true))  //计算得到一排放置item的个数,即列数
-      for(var i = 0;i < colLength;i++){
-        itemArr[i] = 0   //数组个数为colLength,初始化每个元素为0
-      }
-    
-    
-      start()            //保证页面初加载
-      
-      function start(){
-        //思路实现:获取数据,变成DOM结构,瀑布流方式部署到页面
-        getData(function(newList){
-          $(newList).each(function(index,news){
-            var $node = getNode(news)            //将数据变成DOM结构
-            
-            $node.find('img').load(function(){   //预加载图片后,将其以瀑布流方式部署在页面上
-              $('#pic-ct').append($node)
-              waterFallPlace($node)
-            })
-          })
-        })
-      }
-    
-    
-      $(window).scroll(function(){            //页面滚动至底部#load位置,重新加载数据
-        if(isVisible($('#load'))){
-          start()
-        }
-      })
-      
-      
-      /*函数封装*/
-      
-      
-      //获取数据
-      function getData(callback){
-        $.ajax({
-            url: 'http://platform.sina.com.cn/slide/album_tech',
-            dataType: 'jsonp',
-            jsonp: 'jsoncallback',
-            data:{
-                app_key: '1271687855',
-                num: perPageCount,
-                page: curPage
-            }
-        }).done(function(ret){
-          if(ret && ret.status && ret.status.code === "0"){   //判断数据是否正常
-            callback(ret.data)                                //回调返回的数据
-            curPage++
-          }else{
-            console.log('error')
-          }
-        })
-      }
-    
-    
-    
-      //将数据变为DOM结构
-       function getNode(news){
-        let html = `
-                <li class="item">
-                    <a href="${news.url}" class="link">
-                        <img src="${news.img_url}" alt="">
-                    </a>
-                    <h4 class="header">${news.short_name}</h4>
-                    <p class="content">${news.short_intro
-}</p>
-                </li>
-            `
-        return $(html)
+	 <div class="wrap">
+    <div class="ct-waterfall">
+    	<ul id="pic-ct" class="clearfix" style="height: 5217px;">
+    		<!--<li class="item">
+    			<a href="#" class="link">
+    				<img src="http://s.img.mix.sina.com.cn/auto/resize?img=http%3A%2F%2Fwww.sinaimg.cn%2Fdy%2Fslidenews%2F5_img%2F2016_09%2F453_75615_657883.jpg&size=250_0" alt="">
+    			</a>
+    			<h4 class="header">标题</h4>
+    			<p class="desp">
+    				当地时间2016年3月1日，在东部与亲俄武装作战中受伤的乌克兰士兵接受海豚治疗。
+    			</p>
+    		</li>-->
+
+				<!-- 用于计算 item 宽度和列数，但不展示出来-->
+				<li class="item hide" style=""></li>
+    	<li class="item" style="left: 0px; top: 0px; opacity: 1;"> <a href="http://slide.mil.news.sina.com.cn/k/slide_8_193_74328.html" class="link"><img src="https://k.sinaimg.cn/n/mil/8_ori/upload/21a18b46/213/w2048h1365/20191103/1828-ihuuxuu3040597.jpg/w640slw.jpg" alt=""></a> <h4 class="header">中国L-15猎鹰高清写真来袭</h4><p class="desp">全球颜值最高教练机？中国L-15猎鹰高清写真来袭</p></li><li class="item" style="left: 300px; top: 0px; opacity: 1;"> <a href="http://slide.mil.news.sina.com.cn/l/slide_8_199_74327.html" class="link"><img src="https://k.sinaimg.cn/n/mil/8_ori/upload/21a18b46/215/w2048h1367/20191103/c885-ihuuxuu2978865.jpg/w640slw.jpg" alt=""></a> <h4 class="header">直20曝高清细节照凸显精良工艺</h4><p class="desp">来数数直20铆钉！直20曝高清细节照 凸显精良工艺</p></li><li class="item" style="left: 600px; top: 0px; opacity: 1;"> <a href="http://slide.mil.news.sina.com.cn/k/slide_8_193_74329.html" class="link"><img src="https://k.sinaimg.cn/n/mil/8_ori/upload/21a18b46/560/w1080h1080/20191103/e25e-ihuuxuu3073671.jpg/w640slw.jpg" alt=""></a> <h4 class="header">歼20多处细节新照曝光</h4><p class="desp">工艺水准介于F22与F35之间？歼20多处细节新照曝光</p></li><li class="item" style="left: 0px; top: 302px; opacity: 1;"> <a href="http://slide.mil.news.sina.com.cn/k/slide_8_205_74325.html" class="link"><img src="https://k.sinaimg.cn/n/mil/transform/200/w600h400/20191103/d250-ihuuxuu2810472.jpg/w640slw.jpg" alt=""></a> <h4 class="header">飞行员下不了机怎么办？</h4><p class="desp">飞行员下不了机怎么办？战斗民族用木梯子凑合</p></li><li class="item" style="left: 300px; top: 302px; opacity: 1;"> <a href="http://slide.mil.news.sina.com.cn/k/slide_8_193_74324.html" class="link"><img src="https://k.sinaimg.cn/n/mil/8_ori/upload/21a18b46/100/w1500h1000/20191103/33be-ihuuxuu2770504.jpg/w640slw.jpg" alt=""></a> <h4 class="header">一架安-124降落海口美兰机场</h4><p class="desp">啥时我们也能制造它？一架安124降落海口美兰机场</p></li><li class="item" style="left: 600px; top: 389px; opacity: 1;"> <a href="http://slide.mil.news.sina.com.cn/h/slide_8_203_74271.html" class="link"><img src="https://k.sinaimg.cn/n/mil/8_ori/upload/21a18b46/297/w1617h1080/20191030/2c31-ihqyuym3465479.jpg/w640slw.jpg" alt=""></a> <h4 class="header">国产航母疑似准备刷舷号</h4><p class="desp">国产航母疑似准备刷舷号 官兵在甲板列队演练受阅</p></li><li class="item" style="left: 0px; top: 604px; opacity: 1;"> <a href="http://slide.mil.news.sina.com.cn/k/slide_8_265_74146.html" class="link"><img src="https://k.sinaimg.cn/n/mil/transform/200/w600h400/20191020/5976-ihfpfvz8082030.jpg/w640slw.jpg" alt=""></a> <h4 class="header">英台风战机与地标建筑“合影”</h4><p class="desp">到此一游 英台风战机飞临吉隆坡双子塔上空“合影”</p></li><li class="item" style="left: 300px; top: 604px; opacity: 1;"> <a href="http://slide.mil.news.sina.com.cn/k/slide_8_235_74144.html" class="link"><img src="https://k.sinaimg.cn/n/mil/transform/200/w600h400/20191020/81d0-ihfpfvz7210589.jpg/w640slw.jpg" alt=""></a> <h4 class="header">印空军4架米格29抵阿曼联演</h4><p class="desp">印度空军4架米格29战机抵达阿曼参加联合演习</p></li><li class="item" style="left: 600px; top: 691px; opacity: 1;"> <a href="http://slide.mil.news.sina.com.cn/l/slide_8_242_74143.html" class="link"><img src="https://k.sinaimg.cn/n/mil/transform/200/w600h400/20191020/0a0d-ihfpfvz7122303.jpg/w640slw.jpg" alt=""></a> <h4 class="header">未来机型？美竞标新武直曝光</h4><p class="desp">美新型武直竞标方案曝光 有大翼旋翼叶片可单独控制</p></li><li class="item" style="left: 0px; top: 906px; opacity: 1;"> <a href="http://slide.mil.news.sina.com.cn/l/slide_8_199_74326.html" class="link"><img src="https://k.sinaimg.cn/n/mil/8_ori/upload/21a18b46/620/w947h1273/20191103/3774-ihuuxuu2815705.jpg/w640slw.jpg" alt=""></a> <h4 class="header">直20和黑鹰同角度对比</h4><p class="desp">真的太像了但并不是仿制！直20和黑鹰同角度对比</p></li><li class="item" style="left: 300px; top: 906px; opacity: 1;"> <a href="http://slide.mil.news.sina.com.cn/h/slide_8_198_74142.html" class="link"><img src="https://k.sinaimg.cn/n/mil/transform/200/w600h400/20191020/f63c-ihfpfvz6704892.jpg/w640slw.jpg" alt=""></a> <h4 class="header">美两栖舰演习出动13架F35B</h4><p class="desp">规模宏大：美军两栖战斗舰进行演习 13架F35B参加</p></li><li class="item" style="left: 600px; top: 993px; opacity: 1;"> <a href="http://slide.mil.news.sina.com.cn/k/slide_8_193_74131.html" class="link"><img src="https://k.sinaimg.cn/n/mil/transform/200/w600h400/20191018/9e12-ifzxhxn1718820.jpg/w640slw.jpg" alt=""></a> <h4 class="header">教练10高机动表演为空军庆生</h4><p class="desp">战斗机飞行员必修课！空军过生日猎鹰展翅秀高机动</p></li><li class="item" style="left: 300px; top: 1208px; opacity: 1;"> <a href="http://slide.mil.news.sina.com.cn/k/slide_8_193_74135.html" class="link"><img src="https://k.sinaimg.cn/n/mil/8_ori/upload/21a18b46/476/w1272h804/20191018/3b12-ifzxhxn2090265.jpg/w640slw.jpg" alt=""></a> <h4 class="header">歼20双机编队挂弹玩特技飞行</h4><p class="desp">开弹舱亮利剑！歼20双机编队挂弹玩特技飞行</p></li><li class="item" style="left: 600px; top: 1295px; opacity: 1;"> <a href="http://slide.mil.news.sina.com.cn/k/slide_8_193_74132.html" class="link"><img src="https://k.sinaimg.cn/n/mil/transform/200/w600h400/20191018/b10c-ifzxhxn1838518.jpg/w640slw.jpg" alt=""></a> <h4 class="header">八一飞行表演队上演空中芭蕾</h4><p class="desp">精彩炫目！八一飞行表演队上演空中芭蕾为空军庆生</p></li><li class="item" style="left: 0px; top: 1384px; opacity: 1;"> <a href="http://slide.mil.news.sina.com.cn/k/slide_8_193_74133.html" class="link"><img src="https://k.sinaimg.cn/n/mil/transform/200/w600h400/20191018/b8c9-ifzxhxn1901502.jpg/w640slw.jpg" alt=""></a> <h4 class="header">空军开放日红鹰表演队秀特技</h4><p class="desp">红鹰飞行表演队再秀招牌动作：双机翻滚绕飞</p></li><li class="item" style="left: 300px; top: 1481px; opacity: 1;"> <a href="http://slide.mil.news.sina.com.cn/l/slide_8_242_74122.html" class="link"><img src="https://k.sinaimg.cn/n/mil/transform/200/w600h400/20191016/5b33-ifzxhxm3023563.jpg/w640slw.jpg" alt=""></a> <h4 class="header">外形科幻！贝尔曝下代武直模型</h4><p class="desp">更敏捷更致命！美国贝尔公司展示下代武装直升机模型</p></li><li class="item" style="left: 600px; top: 1597px; opacity: 1;"> <a href="http://slide.mil.news.sina.com.cn/k/slide_8_193_74134.html" class="link"><img src="https://k.sinaimg.cn/n/mil/8_ori/upload/21a18b46/183/w2048h1335/20191018/5308-ifzxhxn2071988.jpg/w640slw.jpg" alt=""></a> <h4 class="header">块头真大！胖妞运20飞行表演</h4><p class="desp">块头真大！胖妞运20亮相航空开放日献上飞行表演</p></li><li class="item" style="left: 0px; top: 1665px; opacity: 1;"> <a href="http://slide.mil.news.sina.com.cn/l/slide_8_62085_74124.html" class="link"><img src="https://k.sinaimg.cn/n/mil/transform/200/w600h400/20191016/97b2-ifzxhxm4425487.png/w640slw.jpg" alt=""></a> <h4 class="header">反导系统如何防御东风17导弹</h4><p class="desp">一轮顷刻上天衢：反导系统咋防东风17高超音速导弹？</p></li><li class="item" style="left: 300px; top: 1783px; opacity: 1;"> <a href="http://slide.mil.news.sina.com.cn/k/slide_8_193_74140.html" class="link"><img src="https://k.sinaimg.cn/n/mil/transform/200/w600h400/20191020/e727-ihfpfvz6209332.jpg/w640slw.jpg" alt=""></a> <h4 class="header">莫名萌感！开放日战机证件照</h4><p class="desp">大头贴来了！空军开放日我军主力战机也来拍个证件照</p></li><li class="item" style="left: 600px; top: 1895px; opacity: 1;"> <a href="http://slide.mil.news.sina.com.cn/l/slide_8_199_74123.html" class="link"><img src="https://k.sinaimg.cn/n/mil/transform/200/w600h400/20191016/a1cd-ifzxhxm3223191.jpg/w640slw.jpg" alt=""></a> <h4 class="header">魔鬼周训练中特战队员想做啥？</h4><p class="desp">负重30公斤每天18小时 魔鬼周训练官兵们最想做啥？</p></li><li class="item" style="left: 0px; top: 1967px; opacity: 1;"> <a href="http://slide.mil.news.sina.com.cn/k/slide_8_210_74120.html" class="link"><img src="https://k.sinaimg.cn/n/mil/transform/200/w600h400/20191016/7751-ifzxhxm2959520.jpg/w640slw.jpg" alt=""></a> <h4 class="header">韩五代机全尺寸模型亮相防展</h4><p class="desp">韩防务展上正式展示自研五代机全尺寸模型 座舱曝光</p></li><li class="item" style="left: 300px; top: 2085px; opacity: 1;"> <a href="http://slide.mil.news.sina.com.cn/l/slide_8_199_74118.html" class="link"><img src="https://k.sinaimg.cn/n/mil/transform/200/w600h400/20191016/1106-ifzxhxm2547608.jpg/w640slw.jpg" alt=""></a> <h4 class="header">高空伞降实跳 我军干部先试水</h4><p class="desp">身先士卒！我军政治工作干部高空伞训率先跳出舱门</p></li><li class="item" style="left: 600px; top: 2197px; opacity: 1;"> <a href="http://slide.mil.news.sina.com.cn/h/slide_8_260_74121.html" class="link"><img src="https://k.sinaimg.cn/n/mil/transform/200/w600h400/20191016/2d05-ifzxhxm2989153.jpg/w640slw.jpg" alt=""></a> <h4 class="header">日“航母”派直升机侦察灾区</h4><p class="desp">救灾心切！日直升机航母派遣直升机前往台风灾区侦察</p></li><li class="item" style="left: 0px; top: 2269px; opacity: 1;"> <a href="http://slide.mil.news.sina.com.cn/l/slide_8_199_74115.html" class="link"><img src="https://k.sinaimg.cn/n/mil/transform/200/w600h400/20191016/9973-ifzxhxm1496817.jpg/w640slw.jpg" alt=""></a> <h4 class="header">优秀！我维和人员障碍赛获奖</h4><p class="desp">祝贺中国维和人员在联黎部队军事障碍比赛中收获奖杯</p></li><li class="item" style="left: 300px; top: 2387px; opacity: 1;"> <a href="http://slide.mil.news.sina.com.cn/l/slide_8_210_74117.html" class="link"><img src="https://k.sinaimg.cn/n/mil/transform/200/w600h400/20191016/8d67-ifzxhxm1958009.jpg/w640slw.jpg" alt=""></a> <h4 class="header">韩未来坦克模型现首尔防务展</h4><p class="desp">首尔防务展韩国展示自研未来坦克 外形科幻</p></li><li class="item" style="left: 600px; top: 2499px; opacity: 1;"> <a href="http://slide.mil.news.sina.com.cn/l/slide_8_199_74116.html" class="link"><img src="https://k.sinaimg.cn/n/mil/transform/200/w600h400/20191016/309f-ifzxhxm1573854.jpg/w640slw.jpg" alt=""></a> <h4 class="header">魔鬼周来了！看武警极限之旅</h4><p class="desp">精彩“魔鬼周”开启 一起围观特战勇士的极限之旅</p></li><li class="item" style="left: 0px; top: 2571px; opacity: 1;"> <a href="http://slide.mil.news.sina.com.cn/h/slide_8_198_74098.html" class="link"><img src="https://k.sinaimg.cn/n/mil/8_ori/upload/21a18b46/560/w1080h1080/20191013/8366-ifvwftk3340514.jpg/w640slw.jpg" alt=""></a> <h4 class="header">美军DDG-1000驱逐舰曝细节大照</h4><p class="desp">世界最强？美军DDG-1000驱逐舰曝细节大照 工艺精良</p></li><li class="item" style="left: 300px; top: 2668px; opacity: 1;"> <a href="http://slide.mil.news.sina.com.cn/h/slide_8_203_74096.html" class="link"><img src="https://k.sinaimg.cn/n/mil/8_ori/upload/21a18b46/297/w1617h1080/20191013/9c0d-ifvwftk2524087.jpg/w640slw.jpg" alt=""></a> <h4 class="header">不日就服役？国产航母启动主机</h4><p class="desp">不日就服役？国产航母启动主机 工人忙清理轮胎印</p></li><li class="item" style="left: 600px; top: 2801px; opacity: 1;"> <a href="http://slide.mil.news.sina.com.cn/k/slide_8_193_74097.html" class="link"><img src="https://k.sinaimg.cn/n/mil/8_ori/upload/21a18b46/215/w2048h1367/20191013/b7c1-ifvwftk3319193.jpg/w640slw.jpg" alt=""></a> <h4 class="header">唯美！夕阳下歼10起飞参加演习</h4><p class="desp">军宣不输美军！夕阳下歼10起飞参加演习 画面超美</p></li><li class="item" style="left: 0px; top: 2960px; opacity: 1;"> <a href="http://slide.mil.news.sina.com.cn/l/slide_8_199_74095.html" class="link"><img src="https://k.sinaimg.cn/n/mil/8_ori/upload/21a18b46/0/w2048h1152/20191013/8f40-ifvwftk2497967.jpg/w640slw.jpg" alt=""></a> <h4 class="header">直8G大型运输直升机机舱曝光</h4><p class="desp">相当宽敞！解放军直8G大型运输直升机机舱曝光</p></li><li class="item" style="left: 300px; top: 2970px; opacity: 1;"> <a href="http://slide.mil.news.sina.com.cn/k/slide_8_235_74080.html" class="link"><img src="https://k.sinaimg.cn/n/mil/transform/200/w600h400/20191011/9780-ifvwfti5172137.jpg/w640slw.jpg" alt=""></a> <h4 class="header">印空军周年庆多国战机大乱斗</h4><p class="desp">大乱斗！印度空军87周年空中阅兵展示“万国造”战机</p></li><li class="item" style="left: 600px; top: 3103px; opacity: 1;"> <a href="http://slide.mil.news.sina.com.cn/l/slide_8_199_74086.html" class="link"><img src="https://k.sinaimg.cn/n/mil/transform/200/w600h400/20191012/8c93-ifvwfti9011056.jpg/w640slw.jpg" alt=""></a> <h4 class="header">直20直博会上表演超低空通场</h4><p class="desp">天津直博会上直20再次登场表演 上演震撼超低空通场</p></li><li class="item" style="left: 0px; top: 3235px; opacity: 1;"> <a href="http://slide.mil.news.sina.com.cn/l/slide_8_199_74087.html" class="link"><img src="https://k.sinaimg.cn/n/mil/transform/200/w600h400/20191012/18bc-ifvwfti9294976.jpg/w640slw.jpg" alt=""></a> <h4 class="header">“风雷”飞行表演队高清靓照</h4><p class="desp">高清靓照！2019直博会上陆军航空兵精彩飞行表演</p></li><li class="item" style="left: 300px; top: 3272px; opacity: 1;"> <a href="http://slide.mil.news.sina.com.cn/k/slide_8_193_74088.html" class="link"><img src="https://k.sinaimg.cn/n/mil/transform/200/w600h400/20191012/e546-ifvwfti9368361.jpg/w640slw.jpg" alt=""></a> <h4 class="header">国产察打一体直升机火力爆表</h4><p class="desp">火力爆表！国产察打一体无人直升机可外挂导弹和机枪</p></li><li class="item" style="left: 600px; top: 3405px; opacity: 1;"> <a href="http://slide.mil.news.sina.com.cn/l/slide_8_199_74085.html" class="link"><img src="https://k.sinaimg.cn/n/mil/transform/200/w600h400/20191012/f5bd-ifvwfti8778733.png/w640slw.jpg" alt=""></a> <h4 class="header">军运会奖牌奖杯融入军体特色</h4><p class="desp">融入军体特色！武汉军运会奖牌、奖杯正式亮相</p></li><li class="item" style="left: 0px; top: 3537px; opacity: 1;"> <a href="http://slide.mil.news.sina.com.cn/h/slide_8_198_74093.html" class="link"><img src="https://k.sinaimg.cn/n/mil/8_ori/upload/21a18b46/27/w846h781/20191013/070e-ifvwftk2403801.jpg/w640slw.jpg" alt=""></a> <h4 class="header">F35B垂直起降瞬间高清细节特写</h4><p class="desp">中国075舰就缺它？F35B垂直起降瞬间高清细节特写</p></li><li class="item" style="left: 300px; top: 3574px; opacity: 1;"> <a href="http://slide.mil.news.sina.com.cn/l/slide_8_199_74081.html" class="link"><img src="https://k.sinaimg.cn/n/mil/transform/200/w600h400/20191011/530e-ifvwfti6215139.jpg/w640slw.jpg" alt=""></a> <h4 class="header">受阅女兵“空降”新兵营教学</h4><p class="desp">大型偶像见面会！受阅女兵“空降”新兵营圈粉无数</p></li><li class="item" style="left: 600px; top: 3707px; opacity: 1;"> <a href="http://slide.mil.news.sina.com.cn/l/slide_8_199_74089.html" class="link"><img src="https://k.sinaimg.cn/n/mil/transform/200/w600h400/20191012/9e1a-ifvwftk0297875.jpg/w640slw.jpg" alt=""></a> <h4 class="header">陆军76集团81火箭炮大漠演练</h4><p class="desp">猛打怒射！陆军第76集团81式火箭炮大漠戈壁实弹演练</p></li><li class="item" style="left: 300px; top: 3876px; opacity: 1;"> <a href="http://slide.mil.news.sina.com.cn/l/slide_8_199_74084.html" class="link"><img src="https://k.sinaimg.cn/n/mil/transform/200/w600h400/20191012/faa8-ifvwfti8671932.jpg/w640slw.jpg" alt=""></a> <h4 class="header">中俄联合反恐演练在俄举行</h4><p class="desp">中俄“合作-2019”联合反恐演练在新西伯利亚举行</p></li><li class="item" style="left: 0px; top: 3906px; opacity: 1;"> <a href="http://slide.mil.news.sina.com.cn/k/slide_8_193_74094.html" class="link"><img src="https://k.sinaimg.cn/n/mil/8_ori/upload/21a18b46/156/w1660h896/20191013/0b73-ifvwftk2432204.jpg/w640slw.jpg" alt=""></a> <h4 class="header">细看无侦8高速无人机</h4><p class="desp">可由轰6N挂载发射？六代机雏形？细看无侦8无人机</p></li><li class="item" style="left: 600px; top: 4009px; opacity: 1;"> <a href="http://slide.mil.news.sina.com.cn/l/slide_8_199_74071.html" class="link"><img src="https://k.sinaimg.cn/n/mil/transform/200/w600h400/20191010/3f25-ifrwayx5533668.jpg/w640slw.jpg" alt=""></a> <h4 class="header">直20三机组编队进行飞行表演</h4><p class="desp">首次出场秀点啥？直20三机组编队直博会进行飞行表演</p></li><li class="item" style="left: 0px; top: 4175px; opacity: 1;"> <a href="http://slide.mil.news.sina.com.cn/l/slide_8_199_74076.html" class="link"><img src="https://k.sinaimg.cn/n/mil/transform/200/w600h400/20191011/bfb0-ifvwfti4398994.jpg/w640slw.jpg" alt=""></a> <h4 class="header">风雷飞行表演队直10帅气亮相</h4><p class="desp">质感大片！风雷飞行表演队直10武装直升机亮相直博会</p></li><li class="item" style="left: 300px; top: 4178px; opacity: 1;"> <a href="http://slide.mil.news.sina.com.cn/k/slide_8_193_74075.html" class="link"><img src="https://k.sinaimg.cn/n/mil/transform/200/w600h400/20191011/5243-ifvwfti4084275.jpg/w640slw.jpg" alt=""></a> <h4 class="header">电动多桨高速旋翼飞行器亮相</h4><p class="desp">电驱动高速旋翼飞行器：16部桨叶可折叠 时速600公里</p></li><li class="item" style="left: 600px; top: 4311px; opacity: 1;"> <a href="http://slide.mil.news.sina.com.cn/l/slide_8_199_74078.html" class="link"><img src="https://k.sinaimg.cn/n/mil/transform/200/w600h400/20191011/e403-ifvwfti4865704.jpg/w640slw.jpg" alt=""></a> <h4 class="header">某旅迎接受阅官兵和战旗凯旋</h4><p class="desp">某旅举行交旗仪式欢迎受阅战友凯旋 网友：辛苦了</p></li><li class="item" style="left: 0px; top: 4477px; opacity: 1;"> <a href="http://slide.mil.news.sina.com.cn/k/slide_8_193_74068.html" class="link"><img src="https://k.sinaimg.cn/n/mil/transform/200/w600h400/20191010/5a75-ifrwayx4915295.jpg/w640slw.jpg" alt=""></a> <h4 class="header">“黑旋风”加装米波雷达亮相</h4><p class="desp">黑旋风又添新技能：加装毫米波雷达直19武直罕见亮相</p></li><li class="item" style="left: 300px; top: 4480px; opacity: 1;"> <a href="http://slide.mil.news.sina.com.cn/l/slide_8_199_74046.html" class="link"><img src="https://k.sinaimg.cn/n/mil/transform/200/w600h400/20191007/6adf-ifrwayw4263723.jpg/w640slw.jpg" alt=""></a> <h4 class="header">快速出击！某旅野外练实战</h4><p class="desp">快速冲击敌军！陆军第71集团军某旅野外练战法训法</p></li><li class="item" style="left: 600px; top: 4613px; opacity: 1;"> <a href="http://slide.mil.news.sina.com.cn/k/slide_8_193_74047.html" class="link"><img src="https://k.sinaimg.cn/n/mil/transform/200/w600h400/20191007/0cda-ifrwayw4293620.jpg/w640slw.jpg" alt=""></a> <h4 class="header">比较清楚了！空中梯队受阅照</h4><p class="desp">让激动时刻定格！来看网友拍摄一组空中梯队受阅照片</p></li><li class="item" style="left: 0px; top: 4779px; opacity: 1;"> <a href="http://slide.mil.news.sina.com.cn/k/slide_8_193_74052.html" class="link"><img src="https://k.sinaimg.cn/n/mil/8_ori/upload/21a18b46/719/w2048h1071/20191008/36d7-ifrwayw6397344.jpg/w640slw.jpg" alt=""></a> <h4 class="header">军方晒歼20猛照！似变形金刚</h4><p class="desp">军方晒歼20机群猛照！多翼面转动 科幻似变形金刚</p></li><li class="item" style="left: 300px; top: 4782px; opacity: 1;"> <a href="http://slide.mil.news.sina.com.cn/k/slide_8_193_74077.html" class="link"><img src="https://k.sinaimg.cn/n/mil/8_ori/upload/93f8054c/701/w900h601/20191011/27ca-ifvwfti4415144.jpg/w640slw.jpg" alt=""></a> <h4 class="header">能力强！直8G可执行多种任务</h4><p class="desp">运力强用途广！我自研首款大型高原运输机亮相直博会</p></li><li class="item" style="left: 600px; top: 4915px; opacity: 1;"> <a href="http://slide.mil.news.sina.com.cn/k/slide_8_205_74079.html" class="link"><img src="https://k.sinaimg.cn/n/mil/transform/200/w600h400/20191011/00b0-ifvwfti5120250.jpg/w640slw.jpg" alt=""></a> <h4 class="header">化险为夷！俄军安12机腹迫降</h4><p class="desp">俄军一架安12运输机起落架故障用机腹迫降 无人受伤</p></li></ul>
+    	<div id="load">我是看不见的</div>
+    </div>
+	</div>
+
+
+<script src="http://apps.bdimg.com/libs/jquery/1.9.1/jquery.min.js"></script>
+
+<script>
+
+
+//1. 获取数据
+//2. 把数据变为 Dom，通过瀑布流的方式放到页面上
+//3. 当滚动到底部的时候， --》 1
+
+var curPage = 1
+var perPageCount = 10
+var colSumHeight = []
+var nodeWidth = $('.item').outerWidth(true)
+var colNum = parseInt($('#pic-ct').width()/nodeWidth)
+console.log(colNum)
+for(var i = 0; i < colNum; i++){
+	colSumHeight[i] = 0
+}
+
+var isDataArrive = true
+
+start()
+
+function start(){
+
+	getData(function(newsList){
+		console.log(newsList)
+		isDataArrive = true
+		$.each(newsList, function(idx, news){
+			var $node = getNode(news)
+			$node.find('img').load(function(){
+				$('#pic-ct').append($node)
+				console.log($node, 'loaded...')
+				waterFallPlace($node)
+			})
+		})
+	})
+	isDataArrive = false	
+}
+
+
+
+$(window).scroll(function(){
+	if(!isDataArrive) return
+		
+	if(isVisible($('#load'))){
+		start()
+	}
+})
+
+//tips 原接口更换为新接口
+//https://photo.sina.cn/aj/v2/index?cate=military&page=1&pagesize=5
+
+function getData(callback){
+		$.ajax({
+			url: 'https://photo.sina.cn/aj/v2/index?cate=military',
+			dataType: 'jsonp',   
+			jsonp:"callback",
+			data: {
+				pagesize: perPageCount,
+				page: curPage
+			}
+		}).done(function(ret){
+			if(ret && ret.code == 1 ){
+				callback(ret.data);   //如果数据没问题，那么生成节点并摆放好位置
+				curPage++
+			}else{
+				console.log('get error data');
+			}
+		});
+}
+
+
+function getNode(item){
+	var tpl = ''
+		tpl += '<li class="item">';
+		tpl += ' <a href="'+ item.url +'" class="link"><img src="' + item.thumb + '" alt=""></a>';
+		tpl += ' <h4 class="header">'+ item.stitle +'</h4>';
+		tpl += '<p class="desp">' + item.title +'</p>';
+		
+		tpl += '</li>';
+	
+	return $(tpl)
+}
+
+function waterFallPlace($node){
+
+		var idx = 0,
+			  minSumHeight = colSumHeight[0];
+
+		for(var i=0;i<colSumHeight.length; i++){
+			if(colSumHeight[i] < minSumHeight){
+				idx = i;
+				minSumHeight = colSumHeight[i];
+			}
+		}
+		console.log(colSumHeight)
+		console.log('waterFallPlace')
+		console.log(nodeWidth, idx)
+		$node.css({
+			left: nodeWidth*idx,
+			top: minSumHeight,
+			opacity: 1
+		});
+
+		colSumHeight[idx] = $node.outerHeight(true) + colSumHeight[idx];
+		console.log(colSumHeight)
+		$('#pic-ct').height(Math.max.apply(null,colSumHeight));
+
+}
+
+	function isVisible($el){
+	  var scrollH = $(window).scrollTop(),
+	  	  winH = $(window).height(),
+	  	  top = $el.offset().top;
+
+  	  if(top < winH + scrollH){
+  	  	return true;
+  	  }else{
+  	  	return false;
+  	  }
+	}
+
+
+
+
+	
+
+/*
+
+
+
+	var clock;
+	$(window).on('scroll', function(){
+    //用户鼠标滚轮滚动一次，有多次事件响应。下面的 setTimeout 主要是为性能考虑，只在最后一次事件响应的时候执行 checkshow
+    if(clock){
+      clearTimeout(clock);
     }
-    
-      //瀑布流布局
-      function waterFallPlace($node){
-        var minItemHeight = Math.min.apply(null,itemArr)
-        var minItemIndex = itemArr.indexOf(minItemHeight)
-        
-        $node.css({
-          left: $('.item').outerWidth(true) * minItemIndex,
-          top: minItemHeight,
-          opacity: 1
-        })
-        itemArr[minItemIndex] += $node.outerHeight(true)  //当某一列加入新的item,该列高度加上新加的item高度,作为下一次item插入的判断依据
-        
-        $('#pic-ct').height(Math.max.apply(null,itemArr))   //注意这里需要将父容器ul高度设置成数组中的最大高度,因为数组元素item都是绝对定位,脱离了文档流,父容器高度坍塌,需要设置高度,保证底部div#load不总是可见
-      }
-    
-      function isVisible($el){                //图片懒加载
-        var elTop = $el.offset().top,         //页面顶部至目标的高度
-            scrollTop = $(window).scrollTop(),//滚动距离
-            windowHeight = $(window).height() //窗口高度
-        
-        if(elTop < scrollTop + windowHeight + 500){  //还没有滚动至目标就开始加载数据
-          return true
-        }else{
-          return false
-        }
-      }
-  </script>
+    clock = setTimeout(function(){
+      checkShow();
+    }, 100);
+	});
+
+  // 用户第一次打开页面，还未滚动窗口的时候需要执行一次 checkShow
+	checkShow();
+
+*/
+
+
+/*
+
+	function checkShow(){
+		if(isShow($('#load'))){
+			loadAndPlace();
+		}
+	}
+
+	function isShow($el){
+	  var scrollH = $(window).scrollTop(),
+	  	  winH = $(window).height(),
+	  	  top = $el.offset().top;
+
+  	  if(top < winH + scrollH){
+  	  	return true;
+  	  }else{
+  	  	return false;
+  	  }
+	}
+
+
+
+// 获取数据，并且摆放位置
+
+  var curPage = 1,
+		  perPageCount = 9;
+
+	function loadAndPlace(){
+		$.ajax({
+			url: 'http://platform.sina.com.cn/slide/album_tech',
+			dataType: 'jsonp',  
+			jsonp:"jsoncallback",
+			data: {
+				app_key: '1271687855',
+				num: perPageCount,
+				page: curPage
+			}
+		}).done(function(ret){
+			if(ret && ret.status && ret.status.code === "0"){
+				place(ret.data);   //如果数据没问题，那么生成节点并摆放好位置
+				curPage++
+			}else{
+				console.log('get error data');
+			}
+		});
+	}
+
+
+
+function place(nodeList){
+	console.log(nodeList);
+	$.each(nodeList, function(index,item){
+		var $node = getNode(item)
+		$node.find('img').load(function(){
+			$('#pic-ct').append($node)
+			waterFallPlace($node)
+		})
+	})*/
+
+	/*
+
+	var $nodes = renderData(nodeList);  //节点生成后添加到页面上
+
+	var defereds = [];  //创建存储 defered 对象的数组
+	$nodes.find('img').each(function(){
+		var defer = $.Deferred();
+		$(this).load(function(){
+			defer.resolve();
+		});   //当每个图片加载完成后，执行 resolve
+		defereds.push(defer);
+	});
+	$.when.apply(null,defereds).done(function() { //当所有的图片都执行 resolve 后，即全部图片加载后，执行下面的内容
+		console.log('new images all loaded ...');
+		//当节点里的图片全部加载后再使用瀑布流计算，否则会因为图片未加载 item 高度计算错误导致瀑布流高度计算出问题
+		waterFallPlace($nodes);
+	});
+	
+}
+*/
+
+
+
+// 瀑布流
+
+/*
+
+var colSumHeight = [],
+		nodeWidth = $('.item').outerWidth(true),
+		colNum = parseInt($('#pic-ct').width()/nodeWidth);
+
+for(var i=0; i<colNum; i++){
+	colSumHeight.push(0)
+}
+
+function waterFallPlace($nodes){
+	$nodes.each(function(){
+		var $cur = $(this);
+		//colSumHeight = [100, 250, 80, 200]
+
+		var idx = 0,
+			  minSumHeight = colSumHeight[0];
+
+		for(var i=0;i<colSumHeight.length; i++){
+			if(colSumHeight[i] < minSumHeight){
+				idx = i;
+				minSumHeight = colSumHeight[i];
+			}
+		}
+
+		$cur.css({
+			left: nodeWidth*idx,
+			top: minSumHeight,
+			opacity: 1
+		});
+
+		colSumHeight[idx] = $cur.outerHeight(true) + colSumHeight[idx];
+		$('#pic-ct').height(Math.max.apply(null,colSumHeight));
+	});
+
+}
+
+
+
+function getNode(item){
+	var tpl = ''
+		tpl += '<li class="item">';
+		tpl += ' <a href="'+ item.url +'" class="link"><img src="' + item.img_url + '" alt=""></a>';
+		tpl += ' <h4 class="header">'+ item.name +'</h4>';
+		if(item.short_intro) {
+			tpl += '<p class="desp">'+item.short_intro+'</p>';
+		}
+		
+		tpl += '</li>';
+	
+	return $(tpl)
+}
+
+
+function renderData(items){
+	var tpl = '',
+		$nodes;
+	for(var i = 0;i<items.length;i++){
+		tpl += '<li class="item">';
+		tpl += ' <a href="'+ items[i].url +'" class="link"><img src="' + items[i].img_url + '" alt=""></a>';
+		tpl += ' <h4 class="header">'+ items[i].name +'</h4>';
+		if(items[i].short_intro) {
+			tpl += '<p class="desp">'+items[i].short_intro+'</p>';
+		}
+		
+		tpl += '</li>';
+	}
+	$nodes = $(tpl);
+	$('#pic-ct').append($nodes);
+	return $nodes;
+}
+*/
+
+
+</script>
+
+
 </body>
 </html>
